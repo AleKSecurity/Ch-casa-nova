@@ -33,12 +33,36 @@ h2{font-family:'Caveat Brush','Marker Felt',cursive;font-weight:400;font-synthes
 .gift .e{font-size:30px}.gift .t{flex:1}.gift small{display:block;color:var(--mint);font-size:15px}
 .gift.taken{opacity:.55;border-style:dashed;cursor:default}
 .gift.mine{opacity:1;border-color:var(--gold);cursor:pointer}
-.gift .tag{font-size:14px;color:var(--gold);white-space:nowrap}
+.gift .tag{font-size:14px;color:var(--gold);white-space:nowrap}.gift .status{display:block;font-size:14px;color:var(--mint);margin-top:3px}.gift.taken .status{color:#e6a3a3}.gift.mine .status{color:var(--gold)}
 dialog{background:var(--card);color:var(--chalk);border:2px solid var(--gold);border-radius:18px;font:inherit;max-width:340px;width:90%}
 dialog::backdrop{background:#000a}
 input{width:100%;padding:10px;margin:10px 0;border-radius:10px;border:2px solid var(--mint);background:var(--bg);color:var(--chalk);font:inherit;font-size:20px}
 .row{display:flex;gap:8px;justify-content:flex-end}
 #st{text-align:center;color:var(--dim);font-size:16px;margin-top:10px}
+
+/* Melhorias de leitura na lista e na área do Pix */
+.grid, .gift, .gift .t, .gift .tag, .gift .status, .gift small,
+.note, #st, #pixkey, #pixstatus, #copypix, section.card p {
+  font-family: Arial, Helvetica, sans-serif;
+}
+.note { color: #d2d2cc; font-size: 15px; line-height: 1.5; }
+.grid h3 { font-family: Arial, Helvetica, sans-serif; font-size: 21px; font-weight: 700; letter-spacing: .2px; margin-top: 22px; }
+.gift { font-size: 16px; line-height: 1.4; padding: 14px 12px; border-color: #555b5c; background: #292d2e; }
+.gift .e { font-size: 25px; }
+.gift .t { font-weight: 600; color: #ffffff; }
+.gift .tag { font-size: 12px; font-weight: 700; color: #f1d69c; }
+.gift .status { font-size: 13px; line-height: 1.35; font-weight: 700; }
+.gift small { font-size: 13px; }
+.gift.taken { opacity: 1; background: #303031; border-color: #6e5555; }
+.gift.taken .t { color: #d7d7d7; }
+.gift.taken .status { color: #ffb8b8; }
+.gift.mine { background: #333027; border-color: #e3c88f; }
+#st { color: #deded8; font-size: 14px; }
+section.card p { font-size: 16px; line-height: 1.55; color: #f2f0ea; }
+#pixkey { display: inline-block; margin: 6px 0 2px; padding: 12px 14px; border: 1px solid #e3c88f; border-radius: 12px; background: #191b1c; color: #ffe0a1 !important; font-size: 22px !important; font-weight: 700; letter-spacing: .5px; }
+#copypix { font-weight: 700; background: #e3c88f; color: #202020; border-color: #e3c88f; }
+#pixstatus { color: #deded8 !important; font-size: 14px !important; }
+@media (max-width: 380px) { .gift { gap: 8px; padding: 12px 9px; } .gift .tag { font-size: 11px; } #pixkey { font-size: 19px !important; } }
 </style>
 </head>
 <body>
@@ -152,6 +176,14 @@ input{width:100%;padding:10px;margin:10px 0;border-radius:10px;border:2px solid 
 <a class="gift" data-n="Capacho para a entrada" href="#"><span class="e">🛋️</span><span class="t">Capacho para a entrada</span><span class="tag">escolher</span></a>
 </div>
 <div id="st"></div>
+<section class="card" style="margin-top:28px;padding:22px 18px">
+  <h2 style="margin-top:0">💛 Presente via Pix</h2>
+  <p>Se preferir, você também pode contribuir com qualquer valor para ajudar a montar nosso lar. Você pode contribuir com qualquer valor para ajudar a montar nosso lar. 🏡</p>
+  <p style="color:var(--mint);margin-bottom:6px">Chave Pix:</p>
+  <div id="pixkey" style="overflow-wrap:anywhere;color:var(--gold);font-size:20px">12549311981</div>
+  <button class="btn" id="copypix" type="button">Copiar chave Pix</button>
+  <p id="pixstatus" style="font-size:15px;color:var(--dim);margin-bottom:0">Você pode contribuir com qualquer valor. 💛</p>
+</section>
 </div>
 
 <dialog id="dlg">
@@ -181,29 +213,60 @@ const setMine=a=>{try{localStorage.setItem('mine',JSON.stringify(a))}catch(e){}}
 const db=async(path,opt)=>{const r=await fetch(DB_URL+path+'.json',opt);if(!r.ok)throw new Error(r.status);return r.json()};
 async function refresh(){
  if(!DB_URL)return;
- let g={};try{g=await db('/gifts')||{}}catch(e){return}
+ let g={};
+ try{g=await db('/gifts')||{}}
+ catch(e){
+   document.querySelectorAll('.gift').forEach(a=>{
+     let st=a.querySelector('.status');
+     if(!st){st=document.createElement('small');st.className='status';a.querySelector('.t').appendChild(st)}
+     st.textContent='Status indisponível';
+   });
+   return;
+ }
  const mine=getMine();
  const dg=document.getElementById('dg'),dgq=document.getElementById('dgq');let dgfn=null;
  const confirmGift=(q,fn)=>{dgq.textContent=q;dgfn=fn;dg.showModal()};
  document.getElementById('dgno').onclick=()=>dg.close();
  document.getElementById('dgok').onclick=async()=>{dg.close();if(dgfn)await dgfn()};
- document.querySelectorAll('.gift').forEach(a=>a.addEventListener('click',e=>{
-  e.preventDefault();
-  const n=a.dataset.n,k=key(n);
-  if(a.classList.contains('taken')){alert('Esse presente já foi escolhido por outra pessoa 💛 Escolha outro, por favor!');return}
-  if(a.classList.contains('mine')){
-   confirmGift('Desfazer a escolha de "'+n+'"?',async()=>{
-    try{await db('/gifts/'+k,{method:'DELETE'});setMine(getMine().filter(x=>x!==k))}catch(err){alert('Não consegui desfazer agora. Tente de novo.')}
-    refresh()});
-   return}
-  confirmGift('Você vai nos presentear com: '+n+'?',async()=>{
-   try{await db('/gifts/'+k,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('reservado')});setMine(getMine().concat(k));alert('Pronto! Reservamos "'+n+'" para você 💛 Obrigado!')}
-   catch(err){alert('Poxa, alguém acabou de escolher esse presente 😅 Escolha outro, por favor!')}
-   refresh()});
- }));
- document.getElementById('rsvp').addEventListener('click',e=>{e.preventDefault();
+ document.querySelectorAll('.gift').forEach(a=>{
+   const n=a.dataset.n,k=key(n);
+   let st=a.querySelector('.status');
+   if(!st){st=document.createElement('small');st.className='status';a.querySelector('.t').appendChild(st)}
+   a.classList.remove('taken','mine');
+   if(g[k]){
+     if(mine.includes(k)){
+       a.classList.add('mine');st.textContent='✓ Você selecionou este presente';a.querySelector('.tag').textContent='selecionado';
+     }else{
+       a.classList.add('taken');st.textContent='✓ Presente já selecionado';a.querySelector('.tag').textContent='indisponível';
+     }
+   }else{
+     st.textContent='Disponível';a.querySelector('.tag').textContent='escolher';
+   }
+   if(a.dataset.bound==='1')return;
+   a.dataset.bound='1';
+   a.addEventListener('click',e=>{
+    e.preventDefault();
+    if(a.classList.contains('taken')){alert('Esse presente já foi escolhido por outra pessoa 💛 Escolha outro, por favor!');return}
+    if(a.classList.contains('mine')){
+     confirmGift('Desfazer a escolha de "'+n+'"?',async()=>{
+      try{await db('/gifts/'+k,{method:'DELETE'});setMine(getMine().filter(x=>x!==k))}
+      catch(err){alert('Não consegui desfazer agora. Tente de novo.')}
+      refresh()
+     });
+     return;
+    }
+    confirmGift('Você vai nos presentear com: '+n+'?',async()=>{
+     try{
+      await db('/gifts/'+k,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('reservado')});
+      setMine(getMine().concat(k));alert('Pronto! Reservamos "'+n+'" para você 💛 Obrigado!');
+     }catch(err){alert('Poxa, alguém acabou de escolher esse presente 😅 Escolha outro, por favor!')}
+     refresh()
+    });
+   });
+ });
+ document.getElementById('rsvp').onclick=e=>{e.preventDefault();
   ask('Confirmar presença no chá de casa nova?',n=>"Oi! Aqui é "+n+". Confirmo minha presença no chá de casa nova dia 22/11 às 14h 🎉",
-   async name=>{if(DB_URL){try{await db('/rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(name)})}catch(e){}}return true})});
+   async name=>{if(DB_URL){try{await db('/rsvp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(name)})}catch(e){}}return true})};
  document.getElementById('no').onclick=()=>dlg.close();
  const send=async k=>{const v=nm.value.trim();if(!v){nm.focus();return}
   if(pre&&!(await pre(v)))return;
@@ -211,6 +274,13 @@ async function refresh(){
  document.getElementById('sh').onclick=()=>send('h');
  document.getElementById('sa').onclick=()=>send('a');
 }
+const pixButton=document.getElementById('copypix');
+if(pixButton)pixButton.onclick=async()=>{
+ const keyText=document.getElementById('pixkey').textContent.trim();
+ const status=document.getElementById('pixstatus');
+ try{await navigator.clipboard.writeText(keyText);status.textContent='Chave Pix copiada! 💛'}
+ catch(e){status.textContent='Pressione e segure a chave para copiá-la.'}
+};
 refresh();
 </script>
 </body>
