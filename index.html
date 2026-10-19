@@ -278,8 +278,28 @@ const pixButton=document.getElementById('copypix');
 if(pixButton)pixButton.onclick=async()=>{
  const keyText=document.getElementById('pixkey').textContent.trim();
  const status=document.getElementById('pixstatus');
- try{await navigator.clipboard.writeText(keyText);status.textContent='Chave Pix copiada! 💛'}
- catch(e){status.textContent='Pressione e segure a chave para copiá-la.'}
+ // Fallback compatível com navegadores Android/iOS quando Clipboard API não está disponível.
+ try{
+   if(navigator.clipboard && window.isSecureContext){
+     await navigator.clipboard.writeText(keyText);
+   }else{
+     const temp=document.createElement('textarea');
+     temp.value=keyText;
+     temp.setAttribute('readonly','');
+     temp.style.position='fixed';
+     temp.style.opacity='0';
+     temp.style.pointerEvents='none';
+     document.body.appendChild(temp);
+     temp.select();
+     temp.setSelectionRange(0,temp.value.length);
+     const copied=document.execCommand('copy');
+     temp.remove();
+     if(!copied) throw new Error('copy failed');
+   }
+   status.textContent='Chave Pix copiada! 💛';
+ }catch(e){
+   status.textContent='Não foi possível copiar automaticamente. Pressione e segure a chave Pix para copiá-la.';
+ }
 };
 refresh();
 </script>
